@@ -28,7 +28,7 @@ async fn get_stork_stargazers_count() -> Result<usize> {
     Ok(api_response.stargazers_count)
 }
 
-async fn get_stork_has_notifs() -> Result<bool> {
+async fn get_has_github_notifs() -> Result<bool> {
     let client = reqwest::Client::new();
 
     let token = std::env::var("GITHUB_TOKEN")?;
@@ -41,13 +41,13 @@ async fn get_stork_has_notifs() -> Result<bool> {
         .await?;
 
     let body = resp.text().await?;
-    let api_response: Vec<serde_json::Value> = serde_json::from_str(&body)?;
-    Ok(api_response.is_empty())
+    let api_response: Vec<serde_json::Value> = serde_json::from_str(dbg!(&body))?;
+    Ok(!api_response.is_empty())
 }
 
 #[get("/github/stork-stars")]
 pub async fn stork_stars() -> HttpResponse {
-    let joined_results = join!(get_stork_stargazers_count(), get_stork_has_notifs());
+    let joined_results = join!(get_stork_stargazers_count(), get_has_github_notifs());
 
     match joined_results {
         (Ok(stargazers), Ok(has_notifs)) => HttpResponse::Ok().json(StorkStarsResponse {
