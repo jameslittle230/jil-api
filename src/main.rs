@@ -16,7 +16,6 @@ use aws_sdk_dynamodb::Client;
 mod github_stork_stars;
 mod guestbook;
 mod guestbook_entry;
-mod guestbook_migration;
 mod slack;
 
 #[derive(Debug, Clone)]
@@ -63,8 +62,6 @@ async fn main() -> std::io::Result<()> {
                 .wrap(HttpAuthentication::bearer(admin_validator))
                 .wrap(Cors::default().allow_any_origin().allowed_methods(["GET", "POST", "OPTIONS"]))
                 .service(guestbook::delete_guestbook_entry)
-                .service(guestbook_migration::migration_2022_03_20_01)
-                .service(guestbook_migration::migration_2022_03_20_02)
             )
 
             .service(
