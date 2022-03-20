@@ -4,15 +4,14 @@ use crate::AppState;
 use actix_web::error::{ErrorBadRequest, ErrorInternalServerError};
 use actix_web::{error::Error as AWError, get, post, web, HttpRequest, HttpResponse};
 use anyhow::{Error as AHError, Result};
-use aws_sdk_dynamodb::model::{AttributeValue, Select};
+use aws_sdk_dynamodb::model::AttributeValue;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 async fn get_guestbook_entries(state: web::Data<AppState>) -> Result<Vec<GuestbookEntry>> {
     let scan_output = state
         .dynamodb
         .scan()
-        .table_name("jil-guestbook-9552749")
+        .table_name("jil-guestbook")
         .send()
         .await?;
 
@@ -20,19 +19,14 @@ async fn get_guestbook_entries(state: web::Data<AppState>) -> Result<Vec<Guestbo
         .items
         .ok_or(AHError::msg("Could not get items from dynamodb"))?;
 
-    let guestbook_entries: Vec<Result<GuestbookEntry>> =
-        items.into_iter().map(GuestbookEntry::try_from).collect();
-
-    let entries: Vec<GuestbookEntry> = guestbook_entries
+    let mut entries: Vec<GuestbookEntry> = items
         .into_iter()
+        .map(GuestbookEntry::try_from)
         .filter_map(|res| res.ok())
         .filter(|entry| entry.deleted_at.is_none())
-        .collect();
+        .collect::<Vec<GuestbookEntry>>();
 
-    // let errs: Vec<String> = guestbook_entries
-    //     .into_iter()
-    //     .filter_map(|res| res.err())
-    //     .collect();
+    entries.sort_by_key(|entry| entry.created_at);
 
     Ok(entries)
 }
@@ -40,6 +34,7 @@ async fn get_guestbook_entries(state: web::Data<AppState>) -> Result<Vec<Guestbo
 #[derive(Debug, Serialize)]
 struct GuestbookListResponse {
     items: Vec<GuestbookEntry>,
+    count: usize,
 }
 
 #[get("/guestbook")]
@@ -47,16 +42,9 @@ pub async fn list_guestbook_entries(state: web::Data<AppState>) -> HttpResponse 
     let guestbook_entries = get_guestbook_entries(state).await;
 
     match guestbook_entries {
-        Ok(entries) => {
-            let sorted_entries = {
-                let mut e = entries;
-                e.sort_by_key(|entry| entry.created_at);
-                e
-            };
-
-            HttpResponse::Ok().json(GuestbookListResponse {
-                items: sorted_entries,
-            })
+        Ok(items) => {
+            let count = (&items).len();
+            HttpResponse::Ok().json(GuestbookListResponse { items, count })
         }
         Err(err) => HttpResponse::InternalServerError().body(format!("{}", err)),
     }
@@ -71,14 +59,13 @@ pub struct GuestbookPostData {
 }
 
 pub async fn put_guestbook_entry(state: web::Data<AppState>, entry: &GuestbookEntry) -> Result<()> {
-    let mut request = state
+    state
         .dynamodb
         .put_item()
-        .table_name("jil-guestbook-9552749");
-
-    request = request.clone().set_item(Some(entry.items()));
-
-    request.send().await?;
+        .table_name("jil-guestbook")
+        .set_item(Some(entry.clone().into()))
+        .send()
+        .await?;
 
     Ok(())
 }
@@ -87,6 +74,7 @@ pub async fn put_guestbook_entry(state: web::Data<AppState>, entry: &GuestbookEn
 pub async fn new_guestbook_entry(
     state: web::Data<AppState>,
     payload: web::Json<GuestbookPostData>,
+    req: HttpRequest,
 ) -> Result<HttpResponse, AWError> {
     let guestbook_entry =
         GuestbookEntry::try_from(payload.into_inner()).map_err(|err| ErrorBadRequest(err))?;
@@ -95,14 +83,11 @@ pub async fn new_guestbook_entry(
         .await
         .map_err(|err| ErrorInternalServerError(err))?;
 
-    let _ = send_slack_message(&guestbook_entry.slack_api_request()).await;
+    let _ = send_slack_message(&guestbook_entry.slack_api_request(req.peer_addr())).await;
 
     // let _ = trigger_netlify_rebuild().await;
 
-    Ok(HttpResponse::Ok().body(
-        serde_json::to_string(&json!({ "id": &guestbook_entry.id.to_hyphenated().to_string() }))
-            .unwrap(),
-    ))
+    Ok(HttpResponse::Ok().body(serde_json::to_string(&guestbook_entry).unwrap()))
 }
 
 #[post("/guestbook/{id}/delete")]
@@ -115,20 +100,21 @@ pub async fn delete_guestbook_entry(
     let mut entry: GuestbookEntry = state
         .dynamodb
         .query()
-        .table_name("jil-guestbook-9552749")
-        .key_condition_expression("#key = :value".to_string())
-        .expression_attribute_names("#key".to_string(), "id".to_string())
-        .expression_attribute_values(":value".to_string(), AttributeValue::S(entry_id))
-        .select(Select::AllAttributes)
+        .table_name("jil-guestbook")
+        .key_condition_expression("id = :value".to_string())
+        .expression_attribute_values(
+            ":value".to_string(),
+            dbg!(AttributeValue::S(entry_id.clone())),
+        )
         .send()
         .await
         .map_err(|err| ErrorBadRequest(err))?
         .items
         .unwrap()
         .pop()
-        .ok_or(ErrorBadRequest(AHError::msg(
-            "No entry found with given ID",
-        )))?
+        .ok_or(ErrorBadRequest(AHError::msg(format!(
+            "No entry found with ID {entry_id}"
+        ))))?
         .try_into()
         .map_err(|err| ErrorInternalServerError(err))?;
 
@@ -138,10 +124,5 @@ pub async fn delete_guestbook_entry(
         .await
         .map_err(|err| ErrorInternalServerError(err))?;
 
-    Ok(HttpResponse::Ok().body("Updated"))
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GuestbookReactionPostData {
-    emoji: String,
+    Ok(HttpResponse::Ok().body(serde_json::to_string(&entry).unwrap()))
 }
