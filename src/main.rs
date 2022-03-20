@@ -44,6 +44,20 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(app_state.clone()))
             .wrap(Logger::new(r#"peer="%a" time="%t" request="%r" response_code=%s response_size_bytes=%b response_time_ms="%D" user_agent="%{User-Agent}i" "#))
 
+            .route(
+                "/healthcheck",
+                web::get().to(|| async { HttpResponse::Ok().body("up") })
+            )
+            
+            .route(
+                "/",
+                web::get().to(|| async { 
+                    HttpResponse::TemporaryRedirect()
+                    .append_header(("Location", "https://jameslittle.me"))
+                    .body("")
+                })
+            )
+
             .service(web::scope("/admin")
                 .wrap(HttpAuthentication::bearer(admin_validator))
                 .wrap(Cors::default().allow_any_origin().allowed_methods(["GET", "POST", "OPTIONS"]))
@@ -57,11 +71,6 @@ async fn main() -> std::io::Result<()> {
                 .service(slack::slack)
                 .service(guestbook::new_guestbook_entry)
                 .service(guestbook::list_guestbook_entries)
-            )
-
-            .route(
-                "/",
-                web::get().to(|| HttpResponse::Ok().body("api.jameslittle.me")),
             )
 
             .default_service(web::route().to(|| HttpResponse::NotFound()))
