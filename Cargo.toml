@@ -12,7 +12,8 @@ aws-config = "0.9.0"
 aws-sdk-dynamodb = "0.9.0"
 chrono = { version = "0.4.19", features = ["serde"] }
 dotenv = "0.15.0"
-dynomite = { path = "../dynomite/dynomite", features = ["derive"] }
+# dynomite = { path = "../dynomite/dynomite" }
+dynomite = { git = "https://github.com/jameslittle230/dynomite" }
 env_logger = "0.9.0"
 futures = "0.3.19"
 log = "0.4.14"

@@ -782,6 +782,7 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 [[package]]
 name = "dynomite"
 version = "0.10.0"
+source = "git+https://github.com/jameslittle230/dynomite#273fe93fc8cdacff94a08fb93c678a601647a1fd"
 dependencies = [
  "again",
  "async-trait",
@@ -797,6 +798,7 @@ dependencies = [
 [[package]]
 name = "dynomite-derive"
 version = "0.10.0"
+source = "git+https://github.com/jameslittle230/dynomite#273fe93fc8cdacff94a08fb93c678a601647a1fd"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
