@@ -2,7 +2,7 @@ use actix_cors::Cors;
 use actix_web::dev::ServiceRequest;
 use actix_web::middleware::Logger;
 use actix_web::web::Data;
-use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web::{web, http, App, HttpResponse, HttpServer};
 
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
@@ -66,7 +66,7 @@ async fn main() -> std::io::Result<()> {
 
             .service(
                 web::scope("")
-                .wrap(Cors::default().allow_any_origin().allowed_methods(["GET", "POST", "OPTIONS"]))
+                .wrap(Cors::default().allow_any_origin().allowed_methods(["GET", "POST", "OPTIONS"]).allowed_header(http::header::CONTENT_TYPE))
                 .service(github_stork_stars::stork_stars)
                 .service(slack::slack)
                 .service(guestbook::new_guestbook_entry)
