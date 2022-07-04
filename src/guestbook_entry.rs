@@ -37,11 +37,11 @@ impl GuestbookEntry {
         let name = self.name.clone();
         let message = self.message.clone();
         let id = self.id.to_hyphenated().to_string();
-        let url = self.url.clone().unwrap_or("N/A".to_string());
-        let email = self.email.clone().unwrap_or("N/A".to_string());
+        let url = self.url.clone().unwrap_or_else(|| "N/A".to_string());
+        let email = self.email.clone().unwrap_or_else(|| "N/A".to_string());
         let peer = peer
             .map(|peer| peer.to_string())
-            .unwrap_or("N/A".to_string());
+            .unwrap_or_else(|| "N/A".to_string());
 
         SlackApiRequest {
             text: format!("Guestbook entry from {}: {}", self.name, self.message),

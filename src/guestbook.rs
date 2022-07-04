@@ -5,7 +5,9 @@ use actix_web::error::{ErrorBadRequest, ErrorInternalServerError};
 use actix_web::{error::Error as AWError, get, post, web, HttpRequest, HttpResponse};
 use anyhow::{Error as AHError, Result};
 use aws_sdk_dynamodb::model::AttributeValue;
+use chrono::DateTime;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 async fn get_guestbook_entries(state: web::Data<AppState>) -> Result<Vec<GuestbookEntry>> {
     let scan_output = state
@@ -17,7 +19,7 @@ async fn get_guestbook_entries(state: web::Data<AppState>) -> Result<Vec<Guestbo
 
     let items = scan_output
         .items
-        .ok_or(AHError::msg("Could not get items from dynamodb"))?;
+        .ok_or_else(|| AHError::msg("Could not get items from dynamodb"))?;
 
     let mut entries: Vec<GuestbookEntry> = items
         .into_iter()
@@ -106,11 +108,11 @@ pub async fn new_guestbook_entry(
     req: HttpRequest,
 ) -> Result<HttpResponse, AWError> {
     let guestbook_entry =
-        GuestbookEntry::try_from(payload.into_inner()).map_err(|err| ErrorBadRequest(err))?;
+        GuestbookEntry::try_from(payload.into_inner()).map_err(ErrorBadRequest)?;
 
     put_guestbook_entry(state, &guestbook_entry)
         .await
-        .map_err(|err| ErrorInternalServerError(err))?;
+        .map_err(ErrorInternalServerError)?;
 
     let _ = send_slack_message(&guestbook_entry.slack_api_request(req.peer_addr())).await;
 
@@ -131,27 +133,22 @@ pub async fn delete_guestbook_entry(
         .query()
         .table_name("jil-guestbook")
         .key_condition_expression("id = :value".to_string())
-        .expression_attribute_values(
-            ":value".to_string(),
-            dbg!(AttributeValue::S(entry_id.clone())),
-        )
+        .expression_attribute_values(":value".to_string(), AttributeValue::S(entry_id.clone()))
         .send()
         .await
-        .map_err(|err| ErrorBadRequest(err))?
+        .map_err(ErrorBadRequest)?
         .items
         .unwrap()
         .pop()
-        .ok_or(ErrorBadRequest(AHError::msg(format!(
-            "No entry found with ID {entry_id}"
-        ))))?
+        .ok_or_else(|| ErrorBadRequest(AHError::msg(format!("No entry found with ID {entry_id}"))))?
         .try_into()
-        .map_err(|err| ErrorInternalServerError(err))?;
+        .map_err(ErrorInternalServerError)?;
 
     entry.deleted_at = Some(chrono::Utc::now());
 
     put_guestbook_entry(state, &entry)
         .await
-        .map_err(|err| ErrorInternalServerError(err))?;
+        .map_err(ErrorInternalServerError)?;
 
     Ok(HttpResponse::Ok().body(serde_json::to_string(&entry).unwrap()))
 }

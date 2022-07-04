@@ -2,13 +2,13 @@ use actix_web::{post, web, HttpRequest, HttpResponse};
 use anyhow::Context;
 use anyhow::Result;
 use reqwest::StatusCode;
+use serde::Serializer;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::str::FromStr;
 use strum_macros::{Display, EnumString};
 
-#[derive(EnumString, Display, PartialEq, Serialize, Deserialize, Clone, Debug)]
-#[serde(into = "String")]
+#[derive(EnumString, Display, PartialEq, Deserialize, Clone, Debug)]
 #[serde(try_from = "String")]
 pub enum SlackChannel {
     #[strum(to_string = "C75C3AW66", serialize = "general")]
@@ -30,6 +30,15 @@ pub enum SlackChannel {
     ApiRequestsWithoutChannel,
 }
 
+impl Serialize for SlackChannel {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
 impl TryFrom<String> for SlackChannel {
     type Error = anyhow::Error;
 
@@ -38,11 +47,11 @@ impl TryFrom<String> for SlackChannel {
     }
 }
 
-impl Into<String> for SlackChannel {
-    fn into(self) -> String {
-        self.to_string()
-    }
-}
+// impl Into<String> for SlackChannel {
+//     fn into(self) -> String {
+//         self.to_string()
+//     }
+// }
 
 impl Default for SlackChannel {
     fn default() -> Self {
@@ -115,7 +124,7 @@ pub async fn slack(req: HttpRequest, payload: web::Json<SlackApiRequest>) -> Htt
 
     match send_slack_message(&payload).await {
         Ok((status, body)) => match status.as_u16() {
-            200 => HttpResponse::Ok().body(body.to_string()),
+            200 => HttpResponse::Ok().body(body),
             _ => {
                 println!("{}", serde_json::to_string_pretty(&payload).unwrap());
                 HttpResponse::BadRequest().body(format!("{} - {}", status, body))

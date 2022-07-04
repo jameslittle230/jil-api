@@ -1,3 +1,5 @@
+#![warn(clippy::dbg_macro)]
+
 use actix_cors::Cors;
 use actix_web::dev::ServiceRequest;
 use actix_web::middleware::Logger;
@@ -25,8 +27,10 @@ pub struct AppState {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let port = std::env::var("PORT").unwrap_or("8080".to_string());
+    let port = std::env::var("PORT").unwrap_or_else( |_| "8080".to_string());
     let addr = format!("0.0.0.0:{}", port);
+
+    println!("{addr}");
 
     env_logger::init_from_env(Env::default().default_filter_or("info"));
 
@@ -73,7 +77,7 @@ async fn main() -> std::io::Result<()> {
                 .service(guestbook::list_guestbook_entries)
             )
 
-            .default_service(web::route().to(|| HttpResponse::NotFound()))
+            .default_service(web::route().to(HttpResponse::NotFound))
 
     })
     .bind(addr)?
@@ -92,9 +96,8 @@ async fn admin_validator(
         Ok(req)
     } else {
         let config = req
-            .app_data::<Config>()
-            .map(|data| data.clone())
-            .unwrap_or_else(Default::default);
+            .app_data::<Config>().cloned()
+            .unwrap_or_default();
 
         Err(AuthenticationError::from(config).into())
     }
