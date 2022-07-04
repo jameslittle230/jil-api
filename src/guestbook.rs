@@ -32,9 +32,30 @@ async fn get_guestbook_entries(state: web::Data<AppState>) -> Result<Vec<Guestbo
 }
 
 #[derive(Debug, Serialize)]
+struct GuestbookListEntry {
+    pub id: Uuid,
+    pub created_at: DateTime<chrono::Utc>,
+    pub url: Option<String>,
+    pub message: String,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize)]
 struct GuestbookListResponse {
-    items: Vec<GuestbookEntry>,
+    items: Vec<GuestbookListEntry>,
     count: usize,
+}
+
+impl From<&GuestbookEntry> for GuestbookListEntry {
+    fn from(guestbook_entry: &GuestbookEntry) -> Self {
+        Self {
+            id: guestbook_entry.id,
+            created_at: guestbook_entry.created_at,
+            url: guestbook_entry.url.clone(),
+            message: guestbook_entry.message.clone(),
+            name: guestbook_entry.name.clone(),
+        }
+    }
 }
 
 #[get("/guestbook")]
@@ -43,8 +64,16 @@ pub async fn list_guestbook_entries(state: web::Data<AppState>) -> HttpResponse 
 
     match guestbook_entries {
         Ok(items) => {
-            let count = (&items).len();
-            HttpResponse::Ok().json(GuestbookListResponse { items, count })
+            let output_items: Vec<GuestbookListEntry> = items
+                .iter()
+                .filter(|entry| entry.deleted_at.is_none())
+                .map(GuestbookListEntry::from)
+                .collect();
+            let count = (&output_items).len();
+            HttpResponse::Ok().json(GuestbookListResponse {
+                items: output_items,
+                count,
+            })
         }
         Err(err) => HttpResponse::InternalServerError().body(format!("{}", err)),
     }
