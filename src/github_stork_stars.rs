@@ -34,14 +34,14 @@ async fn get_has_github_notifs() -> Result<bool> {
     let token = std::env::var("GITHUB_TOKEN")?;
 
     let resp = client
-        .get("https://api.github.com/notifications")
+        .get("https://api.github.com/repos/jameslittle230/stork/notifications")
         .header("User-Agent", "actix-web-jil-api")
         .header("Authorization", format!("Basic {}", token))
         .send()
         .await?;
 
     let body = resp.text().await?;
-    let api_response: Vec<serde_json::Value> = serde_json::from_str(dbg!(&body))?;
+    let api_response: Vec<serde_json::Value> = serde_json::from_str(&body)?;
     Ok(!api_response.is_empty())
 }
 
