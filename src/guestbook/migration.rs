@@ -5,11 +5,13 @@ use aws_sdk_dynamodb::model::{
     AttributeDefinition, KeySchemaElement, KeyType, ProvisionedThroughput, ScalarAttributeType,
 };
 use chrono::{DateTime, NaiveDateTime};
-use dynomite::{AttributeError, Item};
+use dynomite::Item;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::{guestbook_entry::GuestbookEntry, AppState};
+use crate::AppState;
+
+use super::Entry;
 
 #[derive(Debug, Clone, Serialize, Item)]
 pub struct StringTypedGuestbookEntry {
@@ -32,7 +34,7 @@ pub struct StringTypedGuestbookEntry {
     name: String,
 }
 
-impl From<StringTypedGuestbookEntry> for GuestbookEntry {
+impl From<StringTypedGuestbookEntry> for Entry {
     fn from(value: StringTypedGuestbookEntry) -> Self {
         return Self {
             id: Uuid::from_str(value.id.as_str()).unwrap(),
@@ -43,16 +45,15 @@ impl From<StringTypedGuestbookEntry> for GuestbookEntry {
                 ),
                 chrono::Utc,
             ),
-            deleted_at: match value.deleted_at {
-                Some(str) => Some(DateTime::from_utc(
+            deleted_at: value.deleted_at.map(|str| {
+                DateTime::from_utc(
                     NaiveDateTime::from_timestamp(
                         str.parse::<i64>().unwrap() / 1000,
                         (str.parse::<i64>().unwrap() % 1000) as u32,
                     ),
                     chrono::Utc,
-                )),
-                None => None,
-            },
+                )
+            }),
             url: value
                 .url
                 .and_then(|string| string.is_empty().not().then(|| string)),
@@ -111,15 +112,11 @@ pub async fn migration_2022_03_20_02(state: web::Data<AppState>) -> HttpResponse
 
     let items = scan_output.unwrap().items.unwrap();
 
-    let guestbook_entries: Vec<Result<StringTypedGuestbookEntry, AttributeError>> = items
+    let entries: Vec<Entry> = items
         .into_iter()
         .map(StringTypedGuestbookEntry::try_from)
-        .collect();
-
-    let entries: Vec<GuestbookEntry> = guestbook_entries
-        .into_iter()
         .filter_map(|res| res.ok())
-        .map(GuestbookEntry::from)
+        .map(Entry::from)
         .collect();
 
     // Step 3: Save new data type entries to just-created table

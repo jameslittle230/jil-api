@@ -17,7 +17,6 @@ use aws_sdk_dynamodb::Client;
 
 mod github_stork_stars;
 mod guestbook;
-mod guestbook_entry;
 mod slack;
 
 #[derive(Debug, Clone)]
@@ -65,7 +64,7 @@ async fn main() -> std::io::Result<()> {
             .service(web::scope("/admin")
                 .wrap(HttpAuthentication::bearer(admin_validator))
                 .wrap(Cors::default().allow_any_origin().allowed_methods(["GET", "POST", "OPTIONS"]))
-                .service(guestbook::delete_guestbook_entry)
+                .service(guestbook::delete_entry_route)
             )
 
             .service(
@@ -73,8 +72,9 @@ async fn main() -> std::io::Result<()> {
                 .wrap(Cors::default().allow_any_origin().allowed_methods(["GET", "POST", "OPTIONS"]).allowed_header(http::header::CONTENT_TYPE))
                 .service(github_stork_stars::stork_stars)
                 .service(slack::slack)
-                .service(guestbook::new_guestbook_entry)
-                .service(guestbook::list_guestbook_entries)
+                .service(guestbook::post_entry_route)
+                .service(guestbook::get_entries_route)
+                .service(guestbook::get_entry_route)
             )
 
             .default_service(web::route().to(HttpResponse::NotFound))

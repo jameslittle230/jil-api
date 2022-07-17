@@ -6,13 +6,12 @@ use dynomite::Item;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::{
-    guestbook::GuestbookPostData,
-    slack::{SlackApiRequest, SlackChannel},
-};
+use crate::slack::{SlackApiRequest, SlackChannel};
+
+use super::GuestbookPostData;
 
 #[derive(Debug, Clone, Serialize, Item)]
-pub struct GuestbookEntry {
+pub struct Entry {
     #[dynomite(partition_key)]
     pub id: Uuid,
 
@@ -32,7 +31,7 @@ pub struct GuestbookEntry {
     pub name: String,
 }
 
-impl GuestbookEntry {
+impl Entry {
     pub fn slack_api_request(&self, peer: Option<net::SocketAddr>) -> SlackApiRequest {
         let name = self.name.clone();
         let message = self.message.clone();
@@ -117,7 +116,7 @@ impl GuestbookEntry {
     }
 }
 
-impl TryFrom<GuestbookPostData> for GuestbookEntry {
+impl TryFrom<GuestbookPostData> for Entry {
     type Error = anyhow::Error;
 
     fn try_from(value: GuestbookPostData) -> Result<Self, Self::Error> {
@@ -129,7 +128,7 @@ impl TryFrom<GuestbookPostData> for GuestbookEntry {
             return Err(Error::msg("Name must be <= 600 characters"));
         }
 
-        Ok(GuestbookEntry {
+        Ok(Entry {
             id: Uuid::new_v4(),
             created_at: chrono::Utc::now(),
             deleted_at: None,
