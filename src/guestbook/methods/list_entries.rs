@@ -1,14 +1,13 @@
-use actix_web::{get, web, HttpRequest, HttpResponse};
+use actix_web::{web, HttpRequest, HttpResponse};
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    guestbook::{get_undeleted_entries, DisplayableEntry},
+    guestbook::{models::DisplayableEntry, queries::get_undeleted_entries::get_undeleted_entries},
     AppState,
 };
 
-#[get("/guestbook")]
 pub async fn exec(req: HttpRequest, state: web::Data<AppState>) -> HttpResponse {
     let after = web::Query::<GetGuestbookQueryParameters>::from_query(req.query_string())
         .ok()

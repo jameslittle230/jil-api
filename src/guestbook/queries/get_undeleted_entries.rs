@@ -2,9 +2,7 @@ use actix_web::web;
 use anyhow::{Error as AHError, Result};
 use uuid::Uuid;
 
-use crate::AppState;
-
-use super::Entry;
+use crate::{guestbook::models::Entry, AppState};
 
 pub(crate) async fn get_undeleted_entries(
     state: web::Data<AppState>,

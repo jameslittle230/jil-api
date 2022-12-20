@@ -1,17 +1,14 @@
-use actix_web::{
-    error::Error as AWError, error::ErrorBadRequest, get, web, HttpRequest, HttpResponse,
-};
+use actix_web::{error::Error as AWError, error::ErrorBadRequest, web, HttpRequest, HttpResponse};
 
 use anyhow::Result;
 
 use displayable_entry::DisplayableEntry;
 
 use crate::{
-    guestbook::{get_single_entry, models::displayable_entry},
+    guestbook::{models::displayable_entry, queries::get_single_entry::get_single_entry},
     AppState,
 };
 
-#[get("/guestbook/{id}")]
 pub(crate) async fn exec(
     req: HttpRequest,
     state: web::Data<AppState>,

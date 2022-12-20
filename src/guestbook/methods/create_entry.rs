@@ -1,17 +1,19 @@
 use actix_web::{
     error::{Error as AWError, ErrorBadRequest, ErrorInternalServerError},
-    post, web, HttpRequest, HttpResponse,
+    web, HttpRequest, HttpResponse,
 };
 
 use anyhow::Result;
 
 use crate::{
-    guestbook::{models::GuestbookPostData, put_guestbook_entry, Entry},
+    guestbook::{
+        models::{Entry, GuestbookPostData},
+        queries::put_entry::put_guestbook_entry,
+    },
     slack::send_slack_message,
     AppState,
 };
 
-#[post("/guestbook")]
 pub async fn exec(
     state: web::Data<AppState>,
     payload: web::Json<GuestbookPostData>,

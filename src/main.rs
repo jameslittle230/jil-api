@@ -1,23 +1,19 @@
-#![warn(clippy::dbg_macro)]
-
-use actix_cors::Cors;
-use actix_web::dev::ServiceRequest;
-use actix_web::middleware::Logger;
+use actix_web::middleware::{Logger, NormalizePath};
 use actix_web::web::Data;
-use actix_web::{web, http, App, HttpResponse, HttpServer};
-
-use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
-use actix_web_httpauth::extractors::AuthenticationError;
-use actix_web_httpauth::middleware::HttpAuthentication;
+use actix_web::{web,  App, HttpResponse, HttpServer};
 
 use env_logger::Env;
 
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_dynamodb::Client;
+ 
+mod admin_validator;
+use admin_validator::admin_validator;
 
-mod github_stork_stars;
+mod github;
 mod guestbook;
 mod slack;
+mod shortener;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
@@ -46,7 +42,8 @@ async fn main() -> std::io::Result<()> {
             .app_data(actix_web::web::JsonConfig::default().limit(4096))
             .app_data(Data::new(app_state.clone()))
             .wrap(Logger::new(r#"peer="%a" time="%t" request="%r" response_code=%s response_size_bytes=%b response_time_ms="%D" user_agent="%{User-Agent}i" "#))
-
+            .wrap(NormalizePath::trim())
+            
             .route(
                 "/healthcheck",
                 web::get().to(|| async { HttpResponse::Ok().body("up") })
@@ -61,21 +58,10 @@ async fn main() -> std::io::Result<()> {
                 })
             )
 
-            .service(web::scope("/admin")
-                .wrap(HttpAuthentication::bearer(admin_validator))
-                .wrap(Cors::default().allow_any_origin().allowed_methods(["GET", "POST", "OPTIONS"]))
-                .service(guestbook::delete_entry_route)
-            )
-
-            .service(
-                web::scope("")
-                .wrap(Cors::default().allow_any_origin().allowed_methods(["GET", "POST", "OPTIONS"]).allowed_header(http::header::CONTENT_TYPE))
-                .service(github_stork_stars::stork_stars)
-                .service(slack::slack)
-                .service(guestbook::post_entry_route)
-                .service(guestbook::get_entries_route)
-                .service(guestbook::get_entry_route)
-            )
+            .service(web::scope("/guestbook").configure(guestbook::cfg))
+            .service(web::scope("/github").configure(github::cfg))
+            .service(web::scope("/slack").configure(slack::cfg))
+            .service(web::scope("/shortener").configure(shortener::cfg))
 
             .default_service(web::route().to(HttpResponse::NotFound))
 
@@ -84,21 +70,4 @@ async fn main() -> std::io::Result<()> {
     .shutdown_timeout(if cfg!(dbg) { 0 } else { 600 })
     .run()
     .await
-}
-
-async fn admin_validator(
-    req: ServiceRequest,
-    credentials: BearerAuth,
-) -> Result<ServiceRequest, actix_web::Error> {
-    let token = std::env::var("ADMIN_BEARER_TOKEN").unwrap();
-
-    if credentials.token() == token {
-        Ok(req)
-    } else {
-        let config = req
-            .app_data::<Config>().cloned()
-            .unwrap_or_default();
-
-        Err(AuthenticationError::from(config).into())
-    }
 }

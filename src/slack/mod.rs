@@ -1,4 +1,4 @@
-use actix_web::{post, web, HttpRequest, HttpResponse};
+use actix_web::{web, HttpRequest, HttpResponse};
 use anyhow::Context;
 use anyhow::Result;
 use reqwest::StatusCode;
@@ -8,7 +8,7 @@ use serde_json::{Map, Value};
 use std::str::FromStr;
 use strum_macros::{Display, EnumString};
 
-#[derive(EnumString, Display, PartialEq, Deserialize, Clone, Debug)]
+#[derive(EnumString, Display, PartialEq, Eq, Deserialize, Clone, Debug)]
 #[serde(try_from = "String")]
 pub enum SlackChannel {
     #[strum(to_string = "C75C3AW66", serialize = "general")]
@@ -23,11 +23,11 @@ pub enum SlackChannel {
     #[strum(to_string = "C01HFPUJGHZ", serialize = "rrl-feedback")]
     RRLFeedback,
 
-    #[strum(to_string = "C01075PV3QU", serialize = "stork-ci")]
-    StorkCI,
+    #[strum(to_string = "C04GDTZ408Y", serialize = "stork-analytics")]
+    StorkAnalytics,
 
-    #[strum(to_string = "C02HKGWCYL9", serialize = "api-requests-without-channel")]
-    ApiRequestsWithoutChannel,
+    #[strum(to_string = "C04FM91GHA9", serialize = "stork-feedback")]
+    StorkFeedback,
 }
 
 impl Serialize for SlackChannel {
@@ -47,15 +47,9 @@ impl TryFrom<String> for SlackChannel {
     }
 }
 
-// impl Into<String> for SlackChannel {
-//     fn into(self) -> String {
-//         self.to_string()
-//     }
-// }
-
 impl Default for SlackChannel {
     fn default() -> Self {
-        SlackChannel::ApiRequestsWithoutChannel
+        SlackChannel::General
     }
 }
 
@@ -68,6 +62,10 @@ pub struct SlackApiRequest {
 
     #[serde(default)]
     pub blocks: Vec<Map<String, Value>>,
+}
+
+pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
+    cfg.service(web::resource("").route(web::post().to(slack)));
 }
 
 pub async fn send_slack_message(req: &SlackApiRequest) -> Result<(StatusCode, String)> {
@@ -92,7 +90,6 @@ pub async fn send_slack_message(req: &SlackApiRequest) -> Result<(StatusCode, St
     Ok((status, body.to_owned()))
 }
 
-#[post("/slack")]
 pub async fn slack(req: HttpRequest, payload: web::Json<SlackApiRequest>) -> HttpResponse {
     let mut payload = payload.into_inner();
 
@@ -112,7 +109,7 @@ pub async fn slack(req: HttpRequest, payload: web::Json<SlackApiRequest>) -> Htt
 			"elements": [
                 {{
                     "type": "plain_text",
-                    "text": "From: {}",
+                    "text": "From {}",
                     "emoji": true
                 }}
             ]

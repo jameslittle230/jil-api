@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::AppState;
 
-use super::Entry;
+use super::models::Entry;
 
 #[derive(Debug, Clone, Serialize, Item)]
 pub struct StringTypedGuestbookEntry {
@@ -66,8 +66,10 @@ impl From<StringTypedGuestbookEntry> for Entry {
     }
 }
 
+#[allow(unreachable_code)]
 #[post("/migrations/2022-03-20-01-new-guestbook-table/perform")]
 pub async fn migration_2022_03_20_01(state: web::Data<AppState>) -> HttpResponse {
+    return HttpResponse::Forbidden().body("Migration has already taken place.");
     // Step 1: Create a new table
     println!(
         "create table result {:#?}",
@@ -100,8 +102,10 @@ pub async fn migration_2022_03_20_01(state: web::Data<AppState>) -> HttpResponse
     HttpResponse::Ok().body("")
 }
 
+#[allow(unreachable_code)]
 #[post("/migrations/2022-03-20-02-migrate-guestbook-entries/perform")]
 pub async fn migration_2022_03_20_02(state: web::Data<AppState>) -> HttpResponse {
+    return HttpResponse::Forbidden().body("Migration has already taken place.");
     // Step 2: Get existing entries and convert to new data type
     let scan_output = state
         .dynamodb
