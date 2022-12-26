@@ -2,7 +2,7 @@ use actix_web::web;
 use anyhow::{Error as AHError, Result};
 use dynomite::AttributeValue;
 
-use crate::{guestbook::models::Entry, AppState};
+use crate::{guestbook::models::entry::Entry, AppState};
 
 pub(crate) async fn get_single_entry(state: &web::Data<AppState>, id: String) -> Result<Entry> {
     let entry: Entry = state

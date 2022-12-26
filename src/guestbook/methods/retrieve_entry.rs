@@ -2,10 +2,8 @@ use actix_web::{error::Error as AWError, error::ErrorBadRequest, web, HttpReques
 
 use anyhow::Result;
 
-use displayable_entry::DisplayableEntry;
-
 use crate::{
-    guestbook::{models::displayable_entry, queries::get_single_entry::get_single_entry},
+    guestbook::{models::entry::Entry, queries::get_single_entry::get_single_entry},
     AppState,
 };
 
@@ -14,10 +12,9 @@ pub(crate) async fn exec(
     state: web::Data<AppState>,
 ) -> Result<HttpResponse, AWError> {
     let entry_id: String = req.match_info().query("id").parse().unwrap();
-    let displayable_entry: DisplayableEntry = get_single_entry(&state, entry_id)
+    let entry: Entry = get_single_entry(&state, entry_id)
         .await
-        .map_err(ErrorBadRequest)?
-        .into();
+        .map_err(ErrorBadRequest)?;
 
-    Ok(HttpResponse::Ok().body(serde_json::to_string(&displayable_entry).unwrap()))
+    Ok(HttpResponse::Ok().body(serde_json::to_string(&entry).unwrap()))
 }

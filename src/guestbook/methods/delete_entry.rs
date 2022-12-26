@@ -8,7 +8,7 @@ use anyhow::Result;
 
 use crate::{
     guestbook::{
-        models::Entry,
+        models::entry::Entry,
         queries::{get_single_entry::get_single_entry, put_entry::put_guestbook_entry},
     },
     AppState,

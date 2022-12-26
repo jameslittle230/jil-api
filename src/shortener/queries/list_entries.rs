@@ -1,17 +1,13 @@
 use actix_web::web;
 use anyhow::{Error as AHError, Result};
-use uuid::Uuid;
 
-use crate::{guestbook::models::entry::Entry, AppState};
+use crate::{shortener::models::entry::Entry, AppState};
 
-pub(crate) async fn get_undeleted_entries(
-    state: web::Data<AppState>,
-    after: Option<Uuid>,
-) -> Result<(usize, Vec<Entry>)> {
+pub async fn list_shortlink_entries(state: web::Data<AppState>) -> Result<(usize, Vec<Entry>)> {
     let scan_output = state
         .dynamodb
         .scan()
-        .table_name("jil-guestbook")
+        .table_name("jil-link-shortener")
         .send()
         .await?;
 
@@ -33,18 +29,6 @@ pub(crate) async fn get_undeleted_entries(
         .collect();
 
     filtered_entries.sort_by_key(|entry| entry.created_at);
-
-    filtered_entries = filtered_entries
-        .into_iter()
-        .skip_while(|entry| {
-            if let Some(after) = after {
-                entry.id != after
-            } else {
-                false
-            }
-        })
-        .skip(1) // Don't return the element that matches the after thing
-        .collect();
 
     Ok((total_size, filtered_entries))
 }

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    guestbook::{models::DisplayableEntry, queries::get_undeleted_entries::get_undeleted_entries},
+    guestbook::{models::entry::Entry, queries::get_undeleted_entries::get_undeleted_entries},
     AppState,
 };
 
@@ -17,15 +17,9 @@ pub async fn exec(req: HttpRequest, state: web::Data<AppState>) -> HttpResponse 
 
     match guestbook_entries {
         Ok((total_count, items)) => {
-            let output_items: Vec<DisplayableEntry> = items
-                .iter()
-                .map(|e| DisplayableEntry::from(e.clone()))
-                .collect();
-
-            let count = output_items.len();
-
+            let count = items.len();
             HttpResponse::Ok().json(GuestbookListResponse {
-                items: output_items,
+                items,
                 count,
                 total_count,
             })
@@ -41,7 +35,7 @@ struct GetGuestbookQueryParameters {
 
 #[derive(Debug, Serialize)]
 struct GuestbookListResponse {
-    items: Vec<DisplayableEntry>,
+    items: Vec<Entry>,
     count: usize,
     total_count: usize,
 }

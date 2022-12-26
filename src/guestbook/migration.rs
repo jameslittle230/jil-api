@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::AppState;
 
-use super::models::Entry;
+use super::models::entry::Entry;
 
 #[derive(Debug, Clone, Serialize, Item)]
 pub struct StringTypedGuestbookEntry {
@@ -56,17 +56,17 @@ impl From<StringTypedGuestbookEntry> for Entry {
             }),
             url: value
                 .url
-                .and_then(|string| string.is_empty().not().then(|| string)),
+                .and_then(|string| string.is_empty().not().then_some(string)),
             email: value
                 .email
-                .and_then(|string| string.is_empty().not().then(|| string)),
+                .and_then(|string| string.is_empty().not().then_some(string)),
             message: value.message,
             name: value.name,
         };
     }
 }
 
-#[allow(unreachable_code)]
+#[allow(unreachable_code, unused)]
 #[post("/migrations/2022-03-20-01-new-guestbook-table/perform")]
 pub async fn migration_2022_03_20_01(state: web::Data<AppState>) -> HttpResponse {
     return HttpResponse::Forbidden().body("Migration has already taken place.");
@@ -102,7 +102,7 @@ pub async fn migration_2022_03_20_01(state: web::Data<AppState>) -> HttpResponse
     HttpResponse::Ok().body("")
 }
 
-#[allow(unreachable_code)]
+#[allow(unreachable_code, unused)]
 #[post("/migrations/2022-03-20-02-migrate-guestbook-entries/perform")]
 pub async fn migration_2022_03_20_02(state: web::Data<AppState>) -> HttpResponse {
     return HttpResponse::Forbidden().body("Migration has already taken place.");
@@ -140,4 +140,32 @@ pub async fn migration_2022_03_20_02(state: web::Data<AppState>) -> HttpResponse
     }
 
     HttpResponse::Ok().body("")
+}
+
+#[allow(unreachable_code, unused)]
+pub async fn migration_2022_12_23(state: web::Data<AppState>) {
+    let _ = state
+        .dynamodb
+        .create_table()
+        .key_schema(
+            KeySchemaElement::builder()
+                .attribute_name("shortname")
+                .key_type(KeyType::Hash)
+                .build(),
+        )
+        .attribute_definitions(
+            AttributeDefinition::builder()
+                .attribute_name("shortname")
+                .attribute_type(ScalarAttributeType::S)
+                .build(),
+        )
+        .provisioned_throughput(
+            ProvisionedThroughput::builder()
+                .read_capacity_units(1)
+                .write_capacity_units(1)
+                .build(),
+        )
+        .table_name("jil-link-shortener")
+        .send()
+        .await;
 }

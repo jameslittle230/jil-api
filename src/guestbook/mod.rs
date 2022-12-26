@@ -12,8 +12,8 @@ use crate::admin_validator;
 pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::resource("")
-            .route(web::get().to(methods::get_entries_route))
-            .route(web::post().to(methods::post_entry_route))
+            .route(web::get().to(methods::list_entries))
+            .route(web::post().to(methods::create_entry))
             .wrap(
                 Cors::default()
                     .allow_any_origin()
@@ -22,11 +22,11 @@ pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
     )
     .service(
         web::scope("/{id}")
-            .service(web::resource("").route(web::get().to(methods::get_entry_route)))
+            .service(web::resource("").route(web::get().to(methods::retrieve_entry)))
             .service(
                 web::resource("/delete")
                     .wrap(HttpAuthentication::bearer(admin_validator))
-                    .route(web::post().to(methods::delete_entry_route)),
+                    .route(web::post().to(methods::delete_entry)),
             ),
     );
 }

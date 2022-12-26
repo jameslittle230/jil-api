@@ -1,7 +1,7 @@
 use actix_web::web;
 use actix_web_httpauth::middleware::HttpAuthentication;
 
-mod methods;
+pub(self) mod methods;
 mod models;
 mod queries;
 

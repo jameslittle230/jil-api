@@ -1,9 +1,9 @@
-mod create_entry;
-mod delete_entry;
-mod list_entries;
-mod retrieve_entry;
+pub(super) mod create_entry;
+pub(super) mod delete_entry;
+pub(super) mod list_entries;
+pub(super) mod retrieve_entry;
 
-pub(crate) use create_entry::exec as post_entry_route;
-pub(crate) use delete_entry::exec as delete_entry_route;
-pub(crate) use list_entries::exec as get_entries_route;
-pub(crate) use retrieve_entry::exec as get_entry_route;
+pub(super) use create_entry::exec as create_entry;
+pub(super) use delete_entry::exec as delete_entry;
+pub(super) use list_entries::exec as list_entries;
+pub(super) use retrieve_entry::exec as retrieve_entry;
