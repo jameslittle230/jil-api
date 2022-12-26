@@ -1,4 +1,4 @@
-use actix_web::{get, HttpResponse};
+use actix_web::{web, HttpResponse};
 use anyhow::Result;
 use futures::join;
 use serde::{Deserialize, Serialize};
@@ -12,6 +12,10 @@ struct StorkStarsResponse {
 #[derive(Deserialize)]
 struct StorkStarsGithubApiResponse {
     stargazers_count: usize,
+}
+
+pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
+    cfg.service(web::resource("/stork-stars").route(web::get().to(stork_stars)));
 }
 
 async fn get_stork_stargazers_count() -> Result<usize> {
@@ -45,7 +49,6 @@ async fn get_has_github_notifs() -> Result<bool> {
     Ok(!api_response.is_empty())
 }
 
-#[get("/github/stork-stars")]
 pub async fn stork_stars() -> HttpResponse {
     let joined_results = join!(get_stork_stargazers_count(), get_has_github_notifs());
 

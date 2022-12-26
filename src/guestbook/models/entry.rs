@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use crate::slack::{SlackApiRequest, SlackChannel};
 
-use super::GuestbookPostData;
+use super::super::methods::create_entry::PostData;
 
 #[derive(Debug, Clone, Serialize, Item)]
 pub struct Entry {
@@ -18,12 +18,14 @@ pub struct Entry {
     pub created_at: DateTime<chrono::Utc>,
 
     #[dynomite(default)]
+    #[serde(skip_serializing)]
     pub deleted_at: Option<DateTime<chrono::Utc>>,
 
     #[dynomite(default)]
     pub url: Option<String>,
 
     #[dynomite(default)]
+    #[serde(skip_serializing)]
     pub email: Option<String>,
 
     pub message: String,
@@ -116,10 +118,10 @@ impl Entry {
     }
 }
 
-impl TryFrom<GuestbookPostData> for Entry {
+impl TryFrom<PostData> for Entry {
     type Error = anyhow::Error;
 
-    fn try_from(value: GuestbookPostData) -> Result<Self, Self::Error> {
+    fn try_from(value: PostData) -> Result<Self, Self::Error> {
         if value.message.len() > 1200 {
             return Err(Error::msg("Message must be <= 1200 letters."));
         }

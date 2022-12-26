@@ -1,16 +1,32 @@
-mod get_single_entry;
-mod get_undeleted_entries;
+mod methods;
 mod migration;
 mod models;
-mod put_entry;
-mod routes;
+mod queries;
 
-pub(crate) use get_single_entry::get_single_entry;
-pub(crate) use get_undeleted_entries::get_undeleted_entries;
-pub(crate) use models::DisplayableEntry;
-pub(crate) use models::Entry;
-pub(crate) use put_entry::put_guestbook_entry;
-pub(crate) use routes::delete_entry_route;
-pub(crate) use routes::get_entries_route;
-pub(crate) use routes::get_entry_route;
-pub(crate) use routes::post_entry_route;
+use actix_cors::Cors;
+use actix_web::web;
+use actix_web_httpauth::middleware::HttpAuthentication;
+
+use crate::admin_validator;
+
+pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::resource("")
+            .route(web::get().to(methods::list_entries))
+            .route(web::post().to(methods::create_entry))
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allowed_methods(["GET", "POST", "OPTIONS"]),
+            ),
+    )
+    .service(
+        web::scope("/{id}")
+            .service(web::resource("").route(web::get().to(methods::retrieve_entry)))
+            .service(
+                web::resource("/delete")
+                    .wrap(HttpAuthentication::bearer(admin_validator))
+                    .route(web::post().to(methods::delete_entry)),
+            ),
+    );
+}

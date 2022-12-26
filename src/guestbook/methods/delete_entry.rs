@@ -1,17 +1,19 @@
 use actix_web::{
     error::Error as AWError,
     error::{ErrorBadRequest, ErrorInternalServerError},
-    post, web, HttpRequest, HttpResponse,
+    web, HttpRequest, HttpResponse,
 };
 
 use anyhow::Result;
 
 use crate::{
-    guestbook::{get_single_entry, put_guestbook_entry, Entry},
+    guestbook::{
+        models::entry::Entry,
+        queries::{get_single_entry::get_single_entry, put_entry::put_guestbook_entry},
+    },
     AppState,
 };
 
-#[post("/guestbook/{id}/delete")]
 pub async fn exec(state: web::Data<AppState>, req: HttpRequest) -> Result<HttpResponse, AWError> {
     let entry_id: String = req.match_info().query("id").parse().unwrap();
 

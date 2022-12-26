@@ -2,9 +2,7 @@ use actix_web::web;
 use anyhow::{Error as AHError, Result};
 use uuid::Uuid;
 
-use crate::AppState;
-
-use super::Entry;
+use crate::{guestbook::models::entry::Entry, AppState};
 
 pub(crate) async fn get_undeleted_entries(
     state: web::Data<AppState>,
@@ -21,32 +19,32 @@ pub(crate) async fn get_undeleted_entries(
         .items
         .ok_or_else(|| AHError::msg("Could not get items from dynamodb"))?;
 
-    let mut did_see_after_uuid = false;
-
-    let mut entries: Vec<Entry> = items
+    let entries = items
         .into_iter()
         .map(Entry::try_from)
-        .filter_map(|res| res.ok())
-        .filter(|entry| entry.deleted_at.is_none())
-        .collect();
+        .collect::<Result<Vec<Entry>, _>>()?;
 
     let total_size = entries.len();
-    entries.sort_by_key(|entry| entry.created_at);
 
-    entries = entries
-        .into_iter()
-        .skip_while(|entry| match after {
-            Some(after) => {
-                if entry.id == after {
-                    did_see_after_uuid = true;
-                    return true; // don't include the one whose ID was specified
-                }
-
-                !did_see_after_uuid
-            }
-            None => false,
-        })
+    let mut filtered_entries: Vec<Entry> = entries
+        .iter()
+        .filter(|entry| entry.deleted_at.is_none())
+        .cloned()
         .collect();
 
-    Ok((total_size, entries))
+    filtered_entries.sort_by_key(|entry| entry.created_at);
+
+    filtered_entries = filtered_entries
+        .into_iter()
+        .skip_while(|entry| {
+            if let Some(after) = after {
+                entry.id != after
+            } else {
+                false
+            }
+        })
+        .skip(1) // Don't return the element that matches the after thing
+        .collect();
+
+    Ok((total_size, filtered_entries))
 }

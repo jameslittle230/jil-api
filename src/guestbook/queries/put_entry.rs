@@ -1,9 +1,7 @@
 use actix_web::web;
 use anyhow::Result;
 
-use crate::AppState;
-
-use super::Entry;
+use crate::{guestbook::models::entry::Entry, AppState};
 
 pub async fn put_guestbook_entry(state: web::Data<AppState>, entry: &Entry) -> Result<()> {
     state
