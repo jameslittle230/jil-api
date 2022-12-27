@@ -13,4 +13,7 @@ pub struct Entry {
     pub deleted_at: Option<DateTime<chrono::Utc>>,
 
     pub longurl: String,
+
+    #[dynomite(default)]
+    pub clicks: u32,
 }

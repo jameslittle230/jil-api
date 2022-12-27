@@ -1,12 +1,9 @@
-use actix_web::{
-    error::{Error as AWError, ErrorBadRequest, ErrorInternalServerError},
-    web, HttpRequest, HttpResponse,
-};
+use actix_web::{web, HttpRequest, HttpResponse};
 
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    error::ApiError,
     guestbook::{models::entry::Entry, queries::put_entry::put_guestbook_entry},
     slack::send_slack_message,
     AppState,
@@ -24,12 +21,13 @@ pub(crate) async fn exec(
     state: web::Data<AppState>,
     payload: web::Json<PostData>,
     req: HttpRequest,
-) -> Result<HttpResponse, AWError> {
-    let guestbook_entry = Entry::try_from(payload.into_inner()).map_err(ErrorBadRequest)?;
+) -> Result<HttpResponse, ApiError> {
+    let guestbook_entry = Entry::try_from(payload.into_inner())
+        .map_err(|err| ApiError::bad_request(err.to_string().as_str()))?;
 
     put_guestbook_entry(state, &guestbook_entry)
         .await
-        .map_err(ErrorInternalServerError)?;
+        .map_err(|err| ApiError::internal_server_error(err.to_string().as_str()))?;
 
     let _ = send_slack_message(&guestbook_entry.slack_api_request(req.peer_addr())).await;
 

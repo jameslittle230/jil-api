@@ -10,6 +10,9 @@ use aws_sdk_dynamodb::Client;
 mod admin_validator;
 use admin_validator::admin_validator;
 
+mod error;
+use error::ApiError;
+
 mod github;
 mod guestbook;
 mod slack;

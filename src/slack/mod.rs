@@ -1,12 +1,13 @@
 use actix_web::{web, HttpRequest, HttpResponse};
 use anyhow::Context;
 use anyhow::Result;
-use reqwest::StatusCode;
 use serde::Serializer;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::str::FromStr;
 use strum_macros::{Display, EnumString};
+
+use crate::error::ApiError;
 
 #[derive(EnumString, Display, PartialEq, Eq, Deserialize, Clone, Debug)]
 #[serde(try_from = "String")]
@@ -68,29 +69,28 @@ pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
     cfg.service(web::resource("").route(web::post().to(slack)));
 }
 
-pub async fn send_slack_message(req: &SlackApiRequest) -> Result<(StatusCode, String)> {
+pub async fn send_slack_message(req: &SlackApiRequest) -> Result<reqwest::Response> {
     let client = reqwest::Client::new();
 
     let body = serde_json::to_string(&req)?;
 
     let slack_webhook_url = std::env::var("SLACK_WEBHOOK_URL")?;
 
-    let req = client
+    client
         .post(format!(
-            "https://hooks.slack.com/services/{}",
-            slack_webhook_url
+            "https://hooks.slack.com/services/{slack_webhook_url}",
         ))
         .header("Content-Type", "application/json")
-        .body(body);
-
-    let result = req.send().await?;
-    let status = result.status();
-    let body = &result.text().await?;
-
-    Ok((status, body.to_owned()))
+        .body(body)
+        .send()
+        .await
+        .map_err(|err| err.into())
 }
 
-pub async fn slack(req: HttpRequest, payload: web::Json<SlackApiRequest>) -> HttpResponse {
+pub(crate) async fn slack(
+    req: HttpRequest,
+    payload: web::Json<SlackApiRequest>,
+) -> Result<HttpResponse, ApiError> {
     let mut payload = payload.into_inner();
 
     if payload.blocks.is_empty() {
@@ -120,14 +120,14 @@ pub async fn slack(req: HttpRequest, payload: web::Json<SlackApiRequest>) -> Htt
     );
 
     match send_slack_message(&payload).await {
-        Ok((status, body)) => match status.as_u16() {
-            200 => HttpResponse::Ok().body(body),
-            _ => {
-                println!("{}", serde_json::to_string_pretty(&payload).unwrap());
-                HttpResponse::BadRequest().body(format!("{} - {}", status, body))
+        Ok(response) => match response.error_for_status() {
+            Ok(response) => {
+                let body = response.text().await.unwrap_or_default();
+                Ok(HttpResponse::Ok().body(body))
             }
+            Err(err) => Err(ApiError::bad_request(err.to_string().as_str())),
         },
-        Err(err) => HttpResponse::InternalServerError().body(format!("{}", err)),
+        Err(err) => Err(ApiError::internal_server_error(err.to_string().as_str())),
     }
 }
 

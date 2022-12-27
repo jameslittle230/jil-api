@@ -4,11 +4,15 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
+    error::ApiError,
     guestbook::{models::entry::Entry, queries::get_undeleted_entries::get_undeleted_entries},
     AppState,
 };
 
-pub async fn exec(req: HttpRequest, state: web::Data<AppState>) -> HttpResponse {
+pub(crate) async fn exec(
+    req: HttpRequest,
+    state: web::Data<AppState>,
+) -> Result<HttpResponse, ApiError> {
     let after = web::Query::<GetGuestbookQueryParameters>::from_query(req.query_string())
         .ok()
         .map(|params| params.after);
@@ -18,13 +22,13 @@ pub async fn exec(req: HttpRequest, state: web::Data<AppState>) -> HttpResponse 
     match guestbook_entries {
         Ok((total_count, items)) => {
             let count = items.len();
-            HttpResponse::Ok().json(GuestbookListResponse {
+            Ok(HttpResponse::Ok().json(GuestbookListResponse {
                 items,
                 count,
                 total_count,
-            })
+            }))
         }
-        Err(err) => HttpResponse::InternalServerError().body(format!("{}", err)),
+        Err(err) => Err(ApiError::internal_server_error(err.to_string().as_str())),
     }
 }
 
