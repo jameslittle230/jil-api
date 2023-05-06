@@ -17,6 +17,7 @@ pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
             .wrap(
                 Cors::default()
                     .allow_any_origin()
+                    .allow_any_header()
                     .allowed_methods(["GET", "POST", "OPTIONS"]),
             ),
     )
