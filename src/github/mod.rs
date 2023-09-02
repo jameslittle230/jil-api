@@ -1,65 +1,23 @@
 use actix_web::{web, HttpResponse};
-use anyhow::Result;
-use futures::join;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 #[derive(Serialize)]
 struct StorkStarsResponse {
     stargazers: usize,
     has_notifs: bool,
-}
-
-#[derive(Deserialize)]
-struct StorkStarsGithubApiResponse {
-    stargazers_count: usize,
+    message: String,
 }
 
 pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
     cfg.service(web::resource("/stork-stars").route(web::get().to(stork_stars)));
 }
 
-async fn get_stork_stargazers_count() -> Result<usize> {
-    let client = reqwest::Client::new();
-
-    let resp = client
-        .get("https://api.github.com/repos/jameslittle230/stork")
-        .header("User-Agent", "actix-web-jil-api")
-        .send()
-        .await?;
-
-    let body = resp.text().await?;
-    let api_response: StorkStarsGithubApiResponse = serde_json::from_str(&body)?;
-    Ok(api_response.stargazers_count)
-}
-
-async fn get_has_github_notifs() -> Result<bool> {
-    let client = reqwest::Client::new();
-
-    let token = std::env::var("GITHUB_TOKEN")?;
-
-    let resp = client
-        .get("https://api.github.com/repos/jameslittle230/stork/notifications")
-        .header("User-Agent", "actix-web-jil-api")
-        .header("Authorization", format!("Basic {}", token))
-        .send()
-        .await?;
-
-    let body = resp.text().await?;
-    let api_response: Vec<serde_json::Value> = serde_json::from_str(&body)?;
-    Ok(!api_response.is_empty())
-}
-
 pub async fn stork_stars() -> HttpResponse {
-    let joined_results = join!(get_stork_stargazers_count(), get_has_github_notifs());
-
-    match joined_results {
-        (Ok(stargazers), Ok(has_notifs)) => HttpResponse::Ok().json(StorkStarsResponse {
-            stargazers,
-            has_notifs,
-        }),
-
-        (Err(err), _) | (_, Err(err)) => HttpResponse::BadRequest().body(format!("{}", err)),
-    }
+    HttpResponse::Ok().json(StorkStarsResponse {
+        stargazers: 0,
+        has_notifs: false,
+        message: "This API endpoint is deprecated.".to_string(),
+    })
 }
 
 #[cfg(test)]
