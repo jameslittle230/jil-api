@@ -24,11 +24,8 @@ pub enum SlackChannel {
     #[strum(to_string = "C01HFPUJGHZ", serialize = "rrl-feedback")]
     RRLFeedback,
 
-    #[strum(to_string = "C04GDTZ408Y", serialize = "stork-analytics")]
-    StorkAnalytics,
-
-    #[strum(to_string = "C04FM91GHA9", serialize = "stork-feedback")]
-    StorkFeedback,
+    #[strum(to_string = "C05QT3QPDNY", serialize = "wedding-site")]
+    WeddingSite,
 }
 
 impl Serialize for SlackChannel {
@@ -114,7 +111,9 @@ pub(crate) async fn slack(
                 }}
             ]
 		}}"#,
-            req.peer_addr().unwrap()
+            req.connection_info()
+                .realip_remote_addr()
+                .unwrap_or_else(|| "unknown"),
         ))
         .unwrap(),
     );
