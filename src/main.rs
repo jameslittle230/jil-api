@@ -6,7 +6,7 @@ use jil_api::run;
 async fn main() -> Result<(), std::io::Error> {
     let port = std::env::var("PORT").unwrap_or_else(|_| "0".to_string());
 
-    let listener = TcpListener::bind(format!("127.0.0.1:{}", port))
+    let listener = TcpListener::bind(format!("0.0.0.0:{}", port))
         .unwrap_or_else(|_| panic!("Failed to bind to port {}", port));
 
     println!(
