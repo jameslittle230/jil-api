@@ -26,7 +26,7 @@ pub(crate) async fn exec(
     };
 
     if payload.shortname.is_empty() {
-        return Err(ApiError::bad_request("Received an empty shortname"));
+        return Err(ApiError::bad_request("Receivved an empty shortname"));
     }
 
     if payload.longurl.is_empty() {
@@ -36,17 +36,14 @@ pub(crate) async fn exec(
     let put_result = put_shortlink_entry(state, &entry).await;
 
     if let Err(err) = put_result {
-        match &err {
-            aws_sdk_dynamodb::types::SdkError::ServiceError { err, raw: _ } => match err.kind {
-                aws_sdk_dynamodb::error::PutItemErrorKind::ConditionalCheckFailedException(_) => {
-                    return Err(ApiError::bad_request(
-                        format!("Short URL `{}` already exists", payload.shortname.clone())
-                            .as_str(),
-                    ));
-                }
-                _ => {}
-            },
-            _ => {}
+        if let aws_sdk_dynamodb::types::SdkError::ServiceError { err, raw: _ } = &err {
+            if let aws_sdk_dynamodb::error::PutItemErrorKind::ConditionalCheckFailedException(_) =
+                err.kind
+            {
+                return Err(ApiError::bad_request(
+                    format!("Short URL `{}` already exists", payload.shortname.clone()).as_str(),
+                ));
+            }
         }
 
         return Err(ApiError::internal_server_error(err.to_string().as_str()));

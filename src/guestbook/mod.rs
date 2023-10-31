@@ -7,7 +7,7 @@ use actix_cors::Cors;
 use actix_web::web;
 use actix_web_httpauth::middleware::HttpAuthentication;
 
-use crate::admin_validator;
+use crate::validate_admin;
 
 pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -26,7 +26,7 @@ pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
             .service(web::resource("").route(web::get().to(methods::retrieve_entry)))
             .service(
                 web::resource("/delete")
-                    .wrap(HttpAuthentication::bearer(admin_validator))
+                    .wrap(HttpAuthentication::bearer(validate_admin))
                     .route(web::post().to(methods::delete_entry)),
             ),
     );

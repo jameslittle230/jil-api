@@ -4,7 +4,7 @@ use actix_web_httpauth::extractors::{
     AuthenticationError,
 };
 
-pub(crate) async fn admin_validator(
+pub(crate) async fn validate_admin(
     req: ServiceRequest,
     credentials: BearerAuth,
 ) -> Result<ServiceRequest, (actix_web::Error, ServiceRequest)> {

@@ -14,17 +14,17 @@ pub(crate) struct ApiError {
 
 impl ApiError {
     pub(crate) fn bad_request(msg: &str) -> Self {
-        return Self {
+        Self {
             message: msg.to_string(),
             status_code: StatusCode::BAD_REQUEST,
-        };
+        }
     }
 
     pub(crate) fn internal_server_error(msg: &str) -> Self {
-        return Self {
+        Self {
             message: msg.to_string(),
             status_code: StatusCode::INTERNAL_SERVER_ERROR,
-        };
+        }
     }
 }
 

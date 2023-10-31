@@ -9,9 +9,10 @@ use strum_macros::{Display, EnumString};
 
 use crate::error::ApiError;
 
-#[derive(EnumString, Display, PartialEq, Eq, Deserialize, Clone, Debug)]
+#[derive(EnumString, Display, Default, PartialEq, Eq, Deserialize, Clone, Debug)]
 #[serde(try_from = "String")]
 pub enum SlackChannel {
+    #[default]
     #[strum(to_string = "C75C3AW66", serialize = "general")]
     General,
 
@@ -42,12 +43,6 @@ impl TryFrom<String> for SlackChannel {
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         Self::from_str(&value).context("Couldn't parse the given Slack channel")
-    }
-}
-
-impl Default for SlackChannel {
-    fn default() -> Self {
-        SlackChannel::General
     }
 }
 
@@ -113,7 +108,7 @@ pub(crate) async fn slack(
 		}}"#,
             req.connection_info()
                 .realip_remote_addr()
-                .unwrap_or_else(|| "unknown"),
+                .unwrap_or("unknown"),
         ))
         .unwrap(),
     );

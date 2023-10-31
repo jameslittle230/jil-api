@@ -5,7 +5,7 @@ pub(self) mod methods;
 mod models;
 mod queries;
 
-use crate::admin_validator;
+use crate::validate_admin;
 
 pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
     cfg.service(
@@ -16,17 +16,17 @@ pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
                     .route(
                         web::post()
                             .to(methods::create_entry)
-                            .wrap(HttpAuthentication::bearer(admin_validator)),
+                            .wrap(HttpAuthentication::bearer(validate_admin)),
                     ),
             )
             .service(
                 web::resource("/{id}")
-                    .wrap(HttpAuthentication::bearer(admin_validator))
+                    .wrap(HttpAuthentication::bearer(validate_admin))
                     .route(web::post().to(methods::update_entry)),
             )
             .service(
                 web::resource("/{id}/delete")
-                    .wrap(HttpAuthentication::bearer(admin_validator))
+                    .wrap(HttpAuthentication::bearer(validate_admin))
                     .route(web::post().to(methods::delete_entry)),
             ),
     )
@@ -37,7 +37,7 @@ pub(crate) fn cfg(cfg: &mut web::ServiceConfig) {
                 .route(
                     web::post()
                         .to(methods::update_stats)
-                        .wrap(HttpAuthentication::bearer(admin_validator)),
+                        .wrap(HttpAuthentication::bearer(validate_admin)),
                 ),
         ),
     );
