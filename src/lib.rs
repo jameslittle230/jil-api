@@ -1,20 +1,22 @@
 use std::net::TcpListener;
 
+use actix_cors::Cors;
 use actix_web::{
     dev::Server,
     middleware::{Logger, NormalizePath},
     web::{self, Data},
     App, HttpResponse, HttpServer,
 };
+use actix_web_httpauth::middleware::HttpAuthentication;
+use admin::validate_admin;
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_dynamodb::Client;
 use env_logger::Env;
 
 mod admin;
-use admin::validate_admin;
-
+mod api;
+mod blog;
 mod error;
-mod github;
 mod guestbook;
 mod shortener;
 mod slack;
@@ -40,6 +42,7 @@ pub async fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
             .app_data(Data::new(app_state.clone()))
             .wrap(Logger::new(r#"peer="%a" time="%t" request="%r" response_code=%s response_size_bytes=%b response_time_ms="%D" user_agent="%{User-Agent}i" "#))
             .wrap(NormalizePath::trim())
+            .wrap(Cors::permissive())
 
             .route(
                 "/healthcheck",
@@ -55,10 +58,18 @@ pub async fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
                 })
             )
 
-            .service(web::scope("/guestbook").configure(guestbook::cfg))
-            .service(web::scope("/github").configure(github::cfg))
-            .service(web::scope("/slack").configure(slack::cfg))
-            .service(web::scope("/shortener").configure(shortener::cfg))
+            .service(api::github::get_github_stork_stars)
+            .service(api::slack::post_slack)
+            .service(api::guestbook::post_guestbook)
+            .service(api::guestbook::get_guestbook)
+            .service(api::guestbook::get_guestbook_entry)            
+            .service(api::shortener::list_entries)
+            .service(web::scope("")
+                .wrap(HttpAuthentication::bearer(validate_admin))
+                .service(api::guestbook::delete_guestbook_entry)
+                .service(api::blog::get_blog_deploy)
+                .service(api::shortener::create_entry)
+            )
 
             .default_service(web::route().to(HttpResponse::NotFound))
 
