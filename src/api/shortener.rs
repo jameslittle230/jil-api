@@ -30,7 +30,7 @@ pub(crate) async fn list_entries(
     state: web::Data<crate::AppState>,
 ) -> Result<HttpResponse, ApiError> {
     let (_, entries) = list_shortlink_entries(&state.dynamodb).await?;
-    Ok(HttpResponse::Ok().json(entries))
+    Ok(HttpResponse::Ok().json(serde_json::json!({ "items": entries })))
 }
 
 // Get single entry

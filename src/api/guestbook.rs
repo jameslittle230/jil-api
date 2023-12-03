@@ -36,7 +36,7 @@ pub(crate) async fn post_guestbook(
     let _ = send_slack_message(&guestbook_entry.slack_api_request(req.peer_addr())).await;
     let _ = deploy_blog().await;
 
-    if (guestbook_entry.qa) {
+    if guestbook_entry.qa {
         guestbook_entry.push_ser_option("serialize_qa");
     }
     Ok(HttpResponse::Ok().json(&guestbook_entry))
