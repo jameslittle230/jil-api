@@ -62,7 +62,7 @@ pub(crate) async fn update_stats(
 ) -> Result<HttpResponse, ApiError> {
     if payload.is_array() {
         for entry in payload.as_array().unwrap() {
-            let entry = serde_json::from_value(entry.clone()).map_err(|e| {
+            let entry = serde_json::from_value(entry.clone()).map_err(|_| {
                 return ApiError::bad_request(
                     format!("Could not parse entry: {:?}", entry).as_str(),
                 );
