@@ -5,7 +5,10 @@ use crate::{
     error::ApiError,
     shortener::{
         entry::Entry,
-        queries::{list_shortlink_entries, put_shortlink_entry},
+        queries::{
+            create_shortlink_entry, get_shortlink_entry, list_shortlink_entries,
+            put_shortlink_entry,
+        },
     },
 };
 
@@ -21,7 +24,7 @@ pub(crate) async fn create_entry(
     payload: Either<web::Json<CreateEntryForm>, web::Form<CreateEntryForm>>,
 ) -> Result<HttpResponse, ApiError> {
     let shortener_entry = Entry::try_from(payload.into_inner())?;
-    put_shortlink_entry(&state.dynamodb, &shortener_entry).await?;
+    create_shortlink_entry(&state.dynamodb, &shortener_entry).await?;
     Ok(HttpResponse::Ok().json(&shortener_entry))
 }
 
@@ -39,8 +42,17 @@ pub(crate) async fn list_entries(
 // Update single entry
 // #[post("/shortener/entries/{id}")]
 
-// Delete single entry
-// #[post("/shortener/entries/{id}/delete")]
+#[post("/shortener/entries/{id}/delete")]
+pub(crate) async fn delete_entry(
+    state: web::Data<crate::AppState>,
+    path: web::Path<String>,
+) -> Result<HttpResponse, ApiError> {
+    let entry_id = path.into_inner();
+    let mut entry = get_shortlink_entry(&state.dynamodb, &entry_id).await?;
+    entry.deleted_at = Some(chrono::Utc::now());
+    put_shortlink_entry(&state.dynamodb, &entry).await?;
+    Ok(HttpResponse::Ok().json(&entry))
+}
 
 // Update bulk stats
 // #[get("/shortener/stats")]

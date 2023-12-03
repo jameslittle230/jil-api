@@ -1,7 +1,11 @@
 use crate::shortener::entry::Entry;
 use anyhow::{Error, Result};
+use aws_sdk_dynamodb::model::AttributeValue;
 
-pub async fn put_shortlink_entry(dynamodb: &aws_sdk_dynamodb::Client, entry: &Entry) -> Result<()> {
+pub async fn create_shortlink_entry(
+    dynamodb: &aws_sdk_dynamodb::Client,
+    entry: &Entry,
+) -> Result<()> {
     dynamodb
         .put_item()
         .table_name("jil-link-shortener")
@@ -11,6 +15,37 @@ pub async fn put_shortlink_entry(dynamodb: &aws_sdk_dynamodb::Client, entry: &En
         .await?;
 
     Ok(())
+}
+
+pub async fn put_shortlink_entry(dynamodb: &aws_sdk_dynamodb::Client, entry: &Entry) -> Result<()> {
+    dynamodb
+        .put_item()
+        .table_name("jil-link-shortener")
+        .set_item(Some(entry.clone().into()))
+        .send()
+        .await?;
+
+    Ok(())
+}
+
+pub async fn get_shortlink_entry(
+    dynamodb: &aws_sdk_dynamodb::Client,
+    shortname: &str,
+) -> Result<Entry> {
+    let get_item_output = dynamodb
+        .get_item()
+        .table_name("jil-link-shortener")
+        .key("shortname", AttributeValue::S(shortname.to_string()))
+        .send()
+        .await?;
+
+    let item = get_item_output
+        .item
+        .ok_or_else(|| Error::msg("Could not get item from dynamodb"))?;
+
+    let entry = Entry::try_from(item)?;
+
+    Ok(entry)
 }
 
 pub async fn list_shortlink_entries(
