@@ -70,6 +70,7 @@ pub async fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
                 .service(api::blog::get_blog_deploy)
                 .service(api::shortener::create_entry)
                 .service(api::shortener::delete_entry)
+                .service(api::shortener::update_stats)
             )
 
             .default_service(web::route().to(HttpResponse::NotFound))

@@ -1,9 +1,9 @@
 use chrono::DateTime;
 use dynomite::Item;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::api::shortener::CreateEntryForm;
-#[derive(Debug, Clone, Serialize, Item)]
+#[derive(Debug, Clone, Serialize, Deserialize, Item)]
 pub struct Entry {
     #[dynomite(partition_key)]
     pub shortname: String,

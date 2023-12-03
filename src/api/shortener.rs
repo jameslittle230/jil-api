@@ -55,4 +55,23 @@ pub(crate) async fn delete_entry(
 }
 
 // Update bulk stats
-// #[get("/shortener/stats")]
+#[post("/shortener/stats")]
+pub(crate) async fn update_stats(
+    payload: web::Json<serde_json::Value>,
+    state: web::Data<crate::AppState>,
+) -> Result<HttpResponse, ApiError> {
+    if payload.is_array() {
+        for entry in payload.as_array().unwrap() {
+            let entry = serde_json::from_value(entry.clone()).map_err(|e| {
+                return ApiError::bad_request(
+                    format!("Could not parse entry: {:?}", entry).as_str(),
+                );
+            })?;
+            println!("Updating entry: {:?}", entry);
+            put_shortlink_entry(&state.dynamodb, &entry).await?;
+        }
+        Ok(HttpResponse::Ok().body("OK"))
+    } else {
+        Ok(HttpResponse::BadRequest().body("Payload must be an array"))
+    }
+}
