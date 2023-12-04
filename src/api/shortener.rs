@@ -10,6 +10,7 @@ use crate::{
             put_shortlink_entry,
         },
     },
+    slack::{channel::SlackChannel, send_slack_message, SlackApiRequest},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -70,6 +71,15 @@ pub(crate) async fn update_stats(
             println!("Updating entry: {:?}", entry);
             put_shortlink_entry(&state.dynamodb, &entry).await?;
         }
+        let _ = send_slack_message(&SlackApiRequest {
+            channel: SlackChannel::General,
+            blocks: vec![],
+            text: format!(
+                "Updated {} shortlink entries",
+                payload.as_array().unwrap().len()
+            ),
+        })
+        .await;
         Ok(HttpResponse::Ok().body("OK"))
     } else {
         Ok(HttpResponse::BadRequest().body("Payload must be an array"))
