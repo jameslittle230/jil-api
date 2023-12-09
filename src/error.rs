@@ -26,6 +26,13 @@ impl ApiError {
             status_code: StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
+
+    pub(crate) fn rate_limit_error() -> Self {
+        Self {
+            message: "Too many requests made to this endpoint.".to_string(),
+            status_code: StatusCode::TOO_MANY_REQUESTS,
+        }
+    }
 }
 
 impl From<anyhow::Error> for ApiError {

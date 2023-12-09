@@ -22,6 +22,7 @@ dotenv = "0.15.0"
 dynomite = { git = "https://github.com/jameslittle230/dynomite" }
 env_logger = "0.9.0"
 futures = "0.3.19"
+governor = "0.6.0"
 log = "0.4.14"
 reqwest = { version = "0.11.8", features = ["blocking"] }
 serde = { version = "1.0.136", features = ["derive"] }

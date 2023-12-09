@@ -1,4 +1,4 @@
-use std::net::TcpListener;
+use std::{net::TcpListener, sync::Arc, num::NonZeroU32, time::Duration};
 
 use actix_cors::Cors;
 use actix_web::{
@@ -12,6 +12,7 @@ use admin::validate_admin;
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_dynamodb::Client;
 use env_logger::Env;
+use governor::{RateLimiter, Quota, state::{NotKeyed, InMemoryState}, clock::DefaultClock};
 
 mod admin;
 mod api;
@@ -24,6 +25,11 @@ mod slack;
 #[derive(Debug, Clone)]
 pub struct AppState {
     dynamodb: Client,
+
+    // a rate limiter with a fixed capacity of 10 requests per second.
+    // this is a global rate limiter, so it will apply to all routes that
+    // use it.
+    rate_limiter: Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>,
 }
 
 pub async fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
@@ -33,7 +39,10 @@ pub async fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
     let region_provider = RegionProviderChain::default_provider().or_else("us-west-1");
     let config = aws_config::from_env().region(region_provider).load().await;
     let client = Client::new(&config);
-    let app_state = AppState { dynamodb: client };
+    let app_state = AppState { 
+        dynamodb: client,
+        rate_limiter: Arc::new(RateLimiter::direct(Quota::with_period(Duration::from_secs(10)).unwrap()))
+    };
 
     let server = HttpServer::new(move || {
 
@@ -64,6 +73,7 @@ pub async fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
             .service(api::guestbook::get_guestbook)
             .service(api::guestbook::get_guestbook_entry)            
             .service(api::shortener::list_entries)
+            .service(api::home::set_light)
             .service(web::scope("")
                 .wrap(HttpAuthentication::bearer(validate_admin))
                 .service(api::guestbook::delete_guestbook_entry)
