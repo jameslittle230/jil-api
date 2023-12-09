@@ -37,7 +37,7 @@ pub(crate) async fn post_slack(
             "elements": [
                 {
                     "type": "plain_text",
-                    "text": format!("From {}", req.connection_info().realip_remote_addr().unwrap_or("unknown")),
+                    "text": format!("From {}", req.connection_info().realip_remote_addr().unwrap_or("unknown IP")),
                     "emoji": true
                 }
             ]

@@ -1,8 +1,11 @@
-use actix_web::{post, web, HttpResponse};
+use actix_web::{post, web, HttpRequest, HttpResponse};
 use anyhow::Context;
 use serde_json::json;
 
-use crate::error::ApiError;
+use crate::{
+    error::ApiError,
+    slack::{channel::SlackChannel, send_slack},
+};
 
 #[derive(serde::Deserialize)]
 pub(crate) struct LightOptions {
@@ -13,9 +16,21 @@ pub(crate) struct LightOptions {
 pub(crate) async fn set_light(
     state: web::Data<crate::AppState>,
     data: web::Either<web::Json<LightOptions>, web::Form<LightOptions>>,
+    req: HttpRequest,
 ) -> Result<HttpResponse, ApiError> {
     let data = data.into_inner();
-    let valid_colors = vec!["red", "green", "blue", "yellow", "purple"];
+    let _ = send_slack(
+        &format!(
+            "Lights request - {} - {}",
+            data.color.clone().unwrap_or("no color".to_string()),
+            req.connection_info()
+                .realip_remote_addr()
+                .unwrap_or("unknown IP")
+        ),
+        SlackChannel::Lights,
+    )
+    .await;
+    let valid_colors = vec!["red", "green", "blue", "yellow", "purple", "white"];
     if data.color.is_none() || !valid_colors.contains(&data.color.as_ref().unwrap().as_str()) {
         return Err(ApiError::bad_request("Invalid color"));
     }

@@ -33,3 +33,13 @@ pub(crate) async fn send_slack_message(req: &SlackApiRequest) -> Result<reqwest:
         .await
         .map_err(|err| err.into())
 }
+
+pub(crate) async fn send_slack(text: &str, channel: SlackChannel) -> Result<reqwest::Response> {
+    let req = SlackApiRequest {
+        text: text.to_string(),
+        channel,
+        ..Default::default()
+    };
+
+    send_slack_message(&req).await
+}

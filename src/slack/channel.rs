@@ -20,6 +20,9 @@ pub(crate) enum SlackChannel {
     #[strum(to_string = "C05QT3QPDNY", serialize = "wedding-site")]
     WeddingSite,
 
+    #[strum(to_string = "C069AFX67C5", serialize = "lights")]
+    Lights,
+
     Unknown(String),
 }
 
