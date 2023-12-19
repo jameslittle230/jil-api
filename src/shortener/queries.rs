@@ -2,21 +2,6 @@ use crate::shortener::entry::Entry;
 use anyhow::{Error, Result};
 use aws_sdk_dynamodb::model::AttributeValue;
 
-pub async fn create_shortlink_entry(
-    dynamodb: &aws_sdk_dynamodb::Client,
-    entry: &Entry,
-) -> Result<()> {
-    dynamodb
-        .put_item()
-        .table_name("jil-link-shortener")
-        .set_item(Some(entry.clone().into()))
-        .set_condition_expression(Some("attribute_not_exists(shortname)".to_string()))
-        .send()
-        .await?;
-
-    Ok(())
-}
-
 pub async fn put_shortlink_entry(dynamodb: &aws_sdk_dynamodb::Client, entry: &Entry) -> Result<()> {
     dynamodb
         .put_item()

@@ -5,10 +5,7 @@ use crate::{
     error::ApiError,
     shortener::{
         entry::Entry,
-        queries::{
-            create_shortlink_entry, get_shortlink_entry, list_shortlink_entries,
-            put_shortlink_entry,
-        },
+        queries::{get_shortlink_entry, list_shortlink_entries, put_shortlink_entry},
     },
     slack::{channel::SlackChannel, send_slack_message, SlackApiRequest},
 };
@@ -24,8 +21,15 @@ pub(crate) async fn create_entry(
     state: web::Data<crate::AppState>,
     payload: Either<web::Json<CreateEntryForm>, web::Form<CreateEntryForm>>,
 ) -> Result<HttpResponse, ApiError> {
-    let shortener_entry = Entry::try_from(payload.into_inner())?;
-    create_shortlink_entry(&state.dynamodb, &shortener_entry).await?;
+    let payload = payload.into_inner();
+    let get_result = get_shortlink_entry(&state.dynamodb, &payload.shortname).await;
+    if let Ok(entry) = get_result {
+        if entry.deleted_at.is_none() {
+            return Err(ApiError::bad_request("Shortname already exists"));
+        }
+    }
+    let shortener_entry = Entry::try_from(payload)?;
+    put_shortlink_entry(&state.dynamodb, &shortener_entry).await?;
     Ok(HttpResponse::Ok().json(&shortener_entry))
 }
 
