@@ -13,6 +13,7 @@ use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_dynamodb::Client;
 use env_logger::Env;
 use governor::{RateLimiter, Quota, state::{NotKeyed, InMemoryState}, clock::DefaultClock};
+use tokio::sync::Mutex;
 
 mod admin;
 mod api;
@@ -21,6 +22,7 @@ mod error;
 mod guestbook;
 mod shortener;
 mod slack;
+mod ipinfo;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
@@ -30,6 +32,10 @@ pub struct AppState {
     // this is a global rate limiter, so it will apply to all routes that
     // use it.
     rate_limiter: Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>,
+
+    ipinfo_cached_client: Arc<Mutex<ipinfo::CachedIpInfoClient>>,
+
+    light_state: Arc<Mutex<String>>,
 }
 
 pub async fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
@@ -41,7 +47,9 @@ pub async fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
     let client = Client::new(&config);
     let app_state = AppState { 
         dynamodb: client,
-        rate_limiter: Arc::new(RateLimiter::direct(Quota::with_period(Duration::from_secs(10)).unwrap()))
+        rate_limiter: Arc::new(RateLimiter::direct(Quota::with_period(Duration::from_secs(10)).unwrap())),
+        ipinfo_cached_client: Arc::new(Mutex::new(ipinfo::CachedIpInfoClient::new(std::env::var("IPINFO_KEY").unwrap()))),
+        light_state: Arc::new(Mutex::new("off".to_string()))
     };
 
     let server = HttpServer::new(move || {
@@ -74,6 +82,7 @@ pub async fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
             .service(api::guestbook::get_guestbook_entry)            
             .service(api::shortener::list_entries)
             .service(api::home::set_light)
+            .service(api::home::get_light)
             .service(web::scope("")
                 .wrap(HttpAuthentication::bearer(validate_admin))
                 .service(api::guestbook::delete_guestbook_entry)
