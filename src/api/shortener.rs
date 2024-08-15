@@ -1,5 +1,6 @@
 use actix_web::{get, post, web, Either, HttpResponse};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::{
     error::ApiError,
@@ -10,12 +11,31 @@ use crate::{
     slack::{channel::SlackChannel, send_slack_message, SlackApiRequest},
 };
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub(crate) struct CreateEntryForm {
     pub shortname: String,
     pub longurl: String,
 }
 
+/// Create a Shortener Entry
+///
+/// Creates an entry to be added to my personal link shortener.
+///
+/// This API does not resolve the shortlinks to long URLs; it only holds a
+/// key-value store for the mapping between the two.
+///
+/// This endpoint must be called with a bearer token header:
+///
+/// ```
+/// Authorization: Bearer admin
+/// ```
+#[utoipa::path(
+    request_body = inline(CreateEntryForm),
+    responses(
+        (status=200, description = "Success response", body=inline(Entry))
+    ),
+    tag = "Link Shortener"
+)]
 #[post("/shortener/entries")]
 pub(crate) async fn create_entry(
     state: web::Data<crate::AppState>,
@@ -33,6 +53,15 @@ pub(crate) async fn create_entry(
     Ok(HttpResponse::Ok().json(&shortener_entry))
 }
 
+/// List Shortener Entries
+///
+/// Lists all key/value pairs that are saved as link shortener entries.
+#[utoipa::path(
+    responses(
+        (status=200, description = "Success response")
+    ),
+    tag = "Link Shortener"
+)]
 #[get("/shortener/entries")]
 pub(crate) async fn list_entries(
     state: web::Data<crate::AppState>,
@@ -47,6 +76,19 @@ pub(crate) async fn list_entries(
 // Update single entry
 // #[post("/shortener/entries/{id}")]
 
+/// Delete a Shortener Entry
+///
+/// This endpoint must be called with a bearer token header:
+///
+/// ```
+/// Authorization: Bearer admin
+/// ```
+#[utoipa::path(
+    responses(
+        (status=200, description = "Success response", body=inline(Entry))
+    ),
+    tag = "Link Shortener"
+)]
 #[post("/shortener/entries/{id}/delete")]
 pub(crate) async fn delete_entry(
     state: web::Data<crate::AppState>,
@@ -59,7 +101,19 @@ pub(crate) async fn delete_entry(
     Ok(HttpResponse::Ok().json(&entry))
 }
 
-// Update bulk stats
+/// Update Statistics
+///
+/// This endpoint must be called with a bearer token header:
+///
+/// ```
+/// Authorization: Bearer admin
+/// ```
+#[utoipa::path(
+    responses(
+        (status=200, description = "Success response")
+    ),
+    tag = "Link Shortener"
+)]
 #[post("/shortener/stats")]
 pub(crate) async fn update_stats(
     payload: web::Json<serde_json::Value>,

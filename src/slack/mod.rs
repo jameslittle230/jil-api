@@ -4,15 +4,38 @@ use serde_json::{Map, Value};
 
 pub(crate) mod channel;
 use channel::SlackChannel;
+use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, ToSchema)]
 pub(crate) struct SlackApiRequest {
+    /// The fallback text displayed in the OS notification sent by the Slack application.
+    #[schema(inline, example = "A regular bit of plaintext")]
     pub text: String,
 
-    #[serde(default)]
+    /// The name of the Slack channel to send the message to.
+    #[schema(inline, additional_properties)]
     pub channel: SlackChannel,
 
-    #[serde(default)]
+    /// The [slack blocks](https://app.slack.com/block-kit-builder/T74S9SE9F)
+    /// that represent a rich message to be sent to the specified channel.
+    #[schema(example = json!([{
+        "type": "section",
+        "text": {
+          "text": "A message *with some bold text* and _some italicized text_.",
+          "type": "mrkdwn"
+        },
+        "fields": [
+          {
+            "type": "mrkdwn",
+            "text": "High"
+          },
+          {
+            "type": "plain_text",
+            "emoji": true,
+            "text": "Silly"
+          }
+        ]
+      }]))]
     pub blocks: Vec<Map<String, Value>>,
 }
 

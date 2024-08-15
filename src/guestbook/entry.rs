@@ -4,6 +4,8 @@ use anyhow::{Error, Result};
 use chrono::DateTime;
 use dynomite::Item;
 use serde::{ser::SerializeStruct, Serialize};
+use serde_json::json;
+use utoipa::{openapi::schema, ToSchema};
 use uuid::Uuid;
 
 use crate::{
@@ -19,7 +21,15 @@ impl DummyStruct {
     }
 }
 
-#[derive(Debug, Clone, Item)]
+#[derive(Debug, Clone, Item, ToSchema)]
+#[schema(example = json!({
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "created_at": "2024-08-14T23:50:04.648Z",
+    "url": "https://example.com",
+    "email": "john@example.com",
+    "message": "Just stopping by to say hello!",
+    "name": "John Appleseed",
+  }))]
 pub struct Entry {
     #[dynomite(partition_key)]
     pub id: Uuid,

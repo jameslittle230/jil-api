@@ -1,26 +1,34 @@
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use strum_macros::{Display, EnumString};
+use utoipa::ToSchema;
 
-#[derive(EnumString, Display, Default, PartialEq, Eq, Clone, Debug)]
+#[derive(EnumString, Display, Default, PartialEq, Eq, Clone, Debug, ToSchema)]
+#[schema(description = "asdf")]
 pub(crate) enum SlackChannel {
     #[default]
     #[strum(to_string = "C75C3AW66", serialize = "general")]
+    #[schema(rename = "general")]
     General,
 
     #[strum(to_string = "CLVH6SLAZ", serialize = "jil-dot-im")]
+    #[schema(rename = "jil-dot-im")]
     JilDotIm,
 
     #[strum(to_string = "CVBH1GHSM", serialize = "jil-guestbook")]
+    #[schema(rename = "jil-guestbook")]
     JilGuestbook,
 
     #[strum(to_string = "C01HFPUJGHZ", serialize = "rrl-feedback")]
+    #[schema(rename = "rrl-feedback")]
     RRLFeedback,
 
     #[strum(to_string = "C05QT3QPDNY", serialize = "wedding-site")]
+    #[schema(rename = "wedding-site")]
     WeddingSite,
 
     #[strum(to_string = "C069AFX67C5", serialize = "lights")]
+    #[schema(rename = "lights")]
     Lights,
 
     Unknown(String),

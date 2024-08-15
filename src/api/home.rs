@@ -1,13 +1,14 @@
 use actix_web::{get, post, web, HttpRequest, HttpResponse};
 use anyhow::Context;
 use serde_json::json;
+use utoipa::ToSchema;
 
 use crate::{
     error::ApiError,
     slack::{channel::SlackChannel, send_slack},
 };
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, ToSchema)]
 pub(crate) struct LightOptions {
     color: Option<String>,
 }
@@ -39,6 +40,16 @@ fn valid_colors() -> Vec<&'static str> {
     vec!["red", "green", "blue", "yellow", "purple", "white", "off"]
 }
 
+/// Get the State of the Home Light
+///
+/// Returns the current state (color) of the light in my office, with a list of the
+/// valid values you can set it to.
+#[utoipa::path(
+    responses(
+        (status=200, description = "Success response")
+    ),
+    tag = "Home"
+)]
 #[get("/home/light")]
 pub(crate) async fn get_light(
     state: web::Data<crate::AppState>,
@@ -47,6 +58,19 @@ pub(crate) async fn get_light(
     Ok(HttpResponse::Ok().json(json!({ "state": light_state, "values": valid_colors() })))
 }
 
+/// Set the State of the Home Light
+///
+/// Sets the current state (color) of the light in my office, with a list of the
+/// valid values you can set it to.
+///
+/// This endpoint is rate limited to one request every ten seconds.
+#[utoipa::path(
+    request_body (content = inline(LightOptions), example=json!({"color": "blue"})),
+    responses(
+        (status=200, description = "Success response")
+    ),
+    tag = "Home"
+)]
 #[post("/home/light")]
 pub(crate) async fn set_light(
     state: web::Data<crate::AppState>,

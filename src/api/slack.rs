@@ -6,6 +6,15 @@ use crate::{
     slack::{send_slack_message, SlackApiRequest},
 };
 
+/// Send a Slack message
+///
+/// This API wraps the Slack Webhook API, but allows for "standard" channel names
+/// to be used instead of the obscure channel code.
+#[utoipa::path(
+    request_body = inline(SlackApiRequest),
+    responses((status=200, description = "Success response")),
+    tag="Generic"
+)]
 #[post("/slack")]
 pub(crate) async fn post_slack(
     req: HttpRequest,
