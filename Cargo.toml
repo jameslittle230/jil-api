@@ -41,3 +41,4 @@ utoipa = { version = "5.0.0-alpha.1", features = [
     "preserve_path_order",
 ] }
 utoipa-scalar = { version = "0.2.0-alpha.0", features = ["actix-web"] }
+minijinja = "2.3.1"

@@ -4,8 +4,7 @@ use anyhow::{Error, Result};
 use chrono::DateTime;
 use dynomite::Item;
 use serde::{ser::SerializeStruct, Serialize};
-use serde_json::json;
-use utoipa::{openapi::schema, ToSchema};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::{

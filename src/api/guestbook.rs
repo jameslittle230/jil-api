@@ -1,7 +1,7 @@
-use actix_web::{get, post, web, Either, HttpRequest, HttpResponse};
+use actix_web::{get, http::header::ContentType, post, web, Either, HttpRequest, HttpResponse};
+use minijinja::render;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use utoipa::{openapi::schema, IntoParams, ToSchema};
+use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     blog::deploy_blog,
@@ -61,7 +61,10 @@ pub(crate) async fn post_guestbook(
     put_guestbook_entry(&state.dynamodb, &guestbook_entry).await?;
 
     let _ = send_slack_message(&guestbook_entry.slack_api_request(req.peer_addr())).await;
-    let _ = deploy_blog().await;
+
+    if !guestbook_entry.qa {
+        let _ = deploy_blog().await;
+    }
 
     if guestbook_entry.qa {
         guestbook_entry.push_ser_option("serialize_qa");
@@ -75,6 +78,9 @@ pub(crate) struct GetGuestbookQueryParameters {
 
     #[serde(default)]
     pub qa: bool,
+
+    #[serde(default)]
+    pub htmx: bool,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -112,6 +118,9 @@ struct GetGuestbookResponse {
 /// Passing the `qa` query parameter will include all entries, including the ones
 /// submitted with the `QA` field, in the response.
 ///
+/// Passing with the `htmx` query parameter will render the listed entries as a set of
+/// HTML `<li>` elements.
+///
 /// There is no way to display deleted guestbook entries; however, the `total_count`
 /// field in the response will include deleted entries. This was probably a mistake.
 #[utoipa::path(
@@ -126,15 +135,22 @@ pub(crate) async fn get_guestbook(
     query: web::Query<GetGuestbookQueryParameters>,
     state: web::Data<crate::AppState>,
 ) -> Result<HttpResponse, ApiError> {
-    let (total_count, guestbook_entries) =
+    let (total_count, mut guestbook_entries) =
         get_undeleted_entries(&state.dynamodb, query.after, query.qa).await?;
 
     let count = &guestbook_entries.len();
-    Ok(HttpResponse::Ok().json(GetGuestbookResponse {
-        items: guestbook_entries,
-        count: *count,
-        total_count,
-    }))
+
+    if query.htmx {
+        guestbook_entries.reverse();
+        let r = render!(HTMX_GUESTBOOK_LIST_TEMPLATE, entries => guestbook_entries );
+        Ok(HttpResponse::Ok().content_type(ContentType::html()).body(r))
+    } else {
+        Ok(HttpResponse::Ok().json(GetGuestbookResponse {
+            items: guestbook_entries,
+            count: *count,
+            total_count,
+        }))
+    }
 }
 
 /// Get a Single Guestbook Entry
@@ -187,3 +203,26 @@ pub(crate) async fn delete_guestbook_entry(
 
     Ok(HttpResponse::Ok().json(&entry))
 }
+
+const HTMX_GUESTBOOK_LIST_TEMPLATE: &'static str = r#"
+{% for entry in entries %}
+<li class="guestbook-entry" data-entry="{{entry.id}}">
+    <div class="guestbook-metadata" hx-disable>
+        <span class="name">{{entry.name}}</span>
+        <div>
+        <span class="timestamp metadata">
+            <span>Just now</span>
+        </span>
+        {% if entry.url %}
+        <span class="url">
+            <a href="{{entry.url}}">{{entry.url}}</a>
+        </span>
+        {% endif %}
+        </div>
+    </div>
+    <div class="message" hx-disable>
+        <p>{{entry.message}}</p>
+    </div>
+</li>
+{% endfor %}
+"#;
